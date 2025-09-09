@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">MaxRTBAdSDK</string>
+    <string name="banner_ad">Banner Ad</string>
+    <string name="close">Close</string>
+    <string name="app_icon">App Icon</string>
+    <string name="app_logo">App Logo</string>
+    <string name="feed_image">Feed Image</string>
+    <string name="float_ad">Float Ad</string>
+    <string name="mute">Mute</string>
+    <string name="patch_ad">Patch Ad</string>
+</resources>
