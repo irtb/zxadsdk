@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 广告缓存目录 -->
+    <external-cache-path
+        name="ad_cache"
+        path="zxadsdk/cache/" />
+
+    <!-- 广告素材目录 -->
+    <external-files-path
+        name="ad_materials"
+        path="zxadsdk/materials/" />
+
+    <!-- 广告视频目录 -->
+    <external-files-path
+        name="ad_videos"
+        path="zxadsdk/videos/" />
+
+    <!-- 广告图片目录 -->
+    <external-files-path
+        name="ad_images"
+        path="zxadsdk/images/" />
+
+    <!-- 临时文件目录 -->
+    <cache-path
+        name="ad_temp"
+        path="zxadsdk/temp/" />
+
+    <!-- 内部存储目录 -->
+    <files-path
+        name="ad_internal"
+        path="zxadsdk/" />
+</paths>

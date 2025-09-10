@@ -315,7 +315,7 @@ class UniversalAdRenderer(private val context: Context) {
 
         playerView.player = exoPlayer
 
-        // 监听播放完成
+        // 播放完成
         exoPlayer?.addListener(object : com.google.android.exoplayer2.Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 when (playbackState) {

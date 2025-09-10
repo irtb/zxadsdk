@@ -1,18 +1,78 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- 网络权限 -->
+    <!-- ========== SDK核心权限 ========== -->
+    <!-- 网络权限 - 必需 -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
 
-    <!-- 设备信息权限 -->
-    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <!-- 存储权限 - 用于缓存 (仅旧版本Android) -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28"
+        tools:ignore="ScopedStorage" />
 
-    <!-- 浮窗权限（可选，用于浮窗广告） -->
+    <!-- 视频广告需要的权限 -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- 浮窗权限 - 可选，由宿主app决定 -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
-    <!-- 允许应用获取设备信息 -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <!-- 通知权限 - Android 13+ -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application>
+
+        <!-- ========== SDK核心配置 ========== -->
+        <!-- SDK版本信息 -->
+        <meta-data
+            android:name="com.maxrtb.zxadsdk.SDK_VERSION"
+            android:value="1.0.0" />
+
+        <meta-data
+            android:name="com.maxrtb.zxadsdk.BUILD_VERSION"
+            android:value="100" />
+
+        <!-- 默认配置 -->
+        <meta-data
+            android:name="com.maxrtb.zxadsdk.DEFAULT_BASE_URL"
+            android:value="https://api.maxrtb.com/" />
+
+        <meta-data
+            android:name="com.maxrtb.zxadsdk.CACHE_DIR"
+            android:value="zxadsdk_cache" />
+
+        <meta-data
+            android:name="com.maxrtb.zxadsdk.NETWORK_TIMEOUT"
+            android:value="30" />
+
+    </application>
+
+    <!-- ========== 查询权限 ========== -->
+    <queries>
+        <!-- 浏览器查询 - 用于打开广告链接 -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="http" />
+        </intent>
+
+        <!-- 应用商店查询 - 用于应用下载类广告 -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="market" />
+        </intent>
+
+        <!-- 深度链接查询 -->
+        <package android:name="com.google.android.googlequicksearchbox" />
+    </queries>
 
 </manifest>
