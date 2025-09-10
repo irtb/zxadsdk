@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@android:color/black">
@@ -42,34 +43,37 @@
             android:layout_width="match_parent"
             android:layout_height="48dp"
             android:layout_marginTop="12dp"
-            android:text="查看详情"
+            android:text="@string/VIEW_DETAILS"
             android:textSize="16sp"
             android:textColor="@android:color/white"
-            android:backgroundTint="@android:color/holo_red_dark" />
+            android:backgroundTint="@android:color/holo_red_dark"
+            tools:ignore="VisualLintButtonSize" />
 
     </LinearLayout>
 
     <ImageButton
         android:id="@+id/draw_close"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:layout_alignParentTop="true"
         android:layout_alignParentEnd="true"
         android:layout_margin="16dp"
         android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/close"
         android:src="@drawable/ic_close"
-        android:contentDescription="@string/close" />
+        tools:ignore="ImageContrastCheck" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
         android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
         android:layout_margin="16dp"
-        android:text="广告"
-        android:textSize="12sp"
         android:background="#80000000"
         android:padding="4dp"
-        android:textColor="@android:color/white" />
+        android:text="@string/AD"
+        android:textColor="#000000"
+        android:textSize="12sp"
+        tools:ignore="RelativeOverlap" />
 
 </RelativeLayout>

@@ -8,4 +8,6 @@
     <string name="float_ad">Float Ad</string>
     <string name="mute">Mute</string>
     <string name="patch_ad">Patch Ad</string>
+    <string name="AD">广告</string>
+    <string name="VIEW_DETAILS">查看详情</string>
 </resources>

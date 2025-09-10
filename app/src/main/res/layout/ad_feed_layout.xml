@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/feed_card"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -59,11 +60,12 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
-                    android:text="广告"
+                    android:text="@string/AD"
                     android:textSize="10sp"
                     android:background="#FFE0E0E0"
                     android:padding="2dp"
-                    android:textColor="@android:color/darker_gray" />
+                    android:textColor="@android:color/darker_gray"
+                    tools:ignore="SmallSp" />
 
             </LinearLayout>
 

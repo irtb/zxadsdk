@@ -38,7 +38,7 @@ import com.maxrtb.maxrtbadsdk.model.AdData
 import com.maxrtb.maxrtbadsdk.model.AdType
 import com.maxrtb.maxrtbadsdk.utils.AdTracker
 import com.maxrtb.maxrtbadsdk.utils.DensityUtil
-import com.maxrtb.sdk.R
+import com.maxrtb.zxadsdk.R
 
 class UniversalAdRenderer(private val context: Context) {
 
