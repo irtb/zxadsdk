@@ -1,19 +1,27 @@
 plugins {
-    id("com.android.library")
+    id("com.android.application")
     alias(libs.plugins.kotlin.android)
+    id("kotlin-parcelize")
 }
 
 android {
-    namespace = "com.maxrtb.zxadsdk"
+    namespace = "com.maxrtb.demo"
     compileSdk = 36
 
     defaultConfig {
+        applicationId = "com.maxrtb.demo"
         minSdk = 21
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles("consumer-rules.pro")
+        targetSdk = 36
+        versionCode = 1
+        versionName = "1.0"
     }
-
     buildTypes {
+        debug {
+            isDebuggable = true
+            isMinifyEnabled = false
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -31,40 +39,66 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
-    buildToolsVersion = "36.0.0"
+
+    buildFeatures {
+        viewBinding = true
+        buildConfig = true
+    }
+
+    packagingOptions {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
 }
 
 dependencies {
+    // 导入ZxAdSDK
+    implementation(project(":zxadsdk"))
+
     // Android基础库
-    implementation(libs.androidx.core.ktx.v1120)
+    implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.constraintlayout.v214)
+    implementation(libs.androidx.activity.ktx)
+    implementation(libs.androidx.fragment.ktx)
+
+    // Material Design 组件
     implementation(libs.material)
-    implementation(libs.androidx.constraintlayout)
+    implementation(libs.material.v1110)
+
+    // CardView
     implementation(libs.androidx.cardview)
 
-    // 网络请求
-    implementation(libs.retrofit)
-    implementation(libs.converter.gson)
-    implementation(libs.logging.interceptor)
-    implementation(libs.gson)
+    // 生命周期组件
+    implementation(libs.androidx.lifecycle.runtime.ktx.v270)
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    implementation(libs.androidx.lifecycle.livedata.ktx)
 
-    // 图片加载
-    implementation(libs.glide)
-
-    // 视频播放
-    implementation(libs.exoplayer)
+    // RecyclerView (用于展示日志)
+    implementation(libs.androidx.recyclerview)
 
     // 协程
-    implementation(libs.kotlinx.coroutines.android)
-    implementation(libs.androidx.runtime)
-    implementation(libs.ui)
+    implementation(libs.kotlinx.coroutines.android.v173)
 
-    // 测试依赖
+    // 调试工具
+    debugImplementation(libs.leakcanary.android)
+
+    // 网络调试 (Charles/Proxy man替代品)
+    debugImplementation(libs.library)
+    releaseImplementation(libs.library.no.op)
+
+    // 测试相关
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit.v130)
     androidTestImplementation(libs.androidx.espresso.core.v370)
 
-    implementation(libs.androidx.cardview)
+    // 如果SDK中的这些依赖没有传递过来，也需要添加：
+    implementation(libs.glide)
     implementation(libs.exoplayer)
-    implementation(libs.glide.v4160)
+    implementation(libs.retrofit.v290)
+    implementation(libs.converter.gson.v290)
+    implementation(libs.logging.interceptor.v4120)
+    implementation(libs.kotlinx.coroutines.android)
+
 }

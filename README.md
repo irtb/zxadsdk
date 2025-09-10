@@ -522,5 +522,977 @@ if (Settings.canDrawOverlays(context)) {
 - 网络请求和追踪功能
 
 ---
+# Android SDK打包发布完整指南
 
-**注意**: 本文档适用于Android SDK API 21及以上版本。在生产环境使用前，请确保充分测试所有功能。
+## 1. 生成AAR文件
+
+### 1.1 配置SDK模块的build.gradle
+
+```gradle
+// maxrtbadsdk/build.gradle
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+    id 'maven-publish'  // 添加发布插件
+}
+
+android {
+    namespace 'com.maxrtb.maxrtbadsdk'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 21
+        targetSdk 36
+        versionCode 1
+        versionName "1.0.0"
+        
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles "consumer-rules.pro"
+        
+        // 添加构建信息
+        buildConfigField "String", "VERSION_NAME", "\"${versionName}\""
+        buildConfigField "long", "BUILD_TIME", "${System.currentTimeMillis()}L"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            consumerProguardFiles 'consumer-rules.pro'
+        }
+        debug {
+            minifyEnabled false
+            debuggable true
+        }
+    }
+
+    // 生成源码JAR（可选）
+    task androidSourcesJar(type: Jar) {
+        archiveClassifier.set('sources')
+        from android.sourceSets.main.java.source
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+}
+
+dependencies {
+    // SDK依赖项
+    api 'androidx.core:core-ktx:1.12.0'
+    api 'androidx.appcompat:appcompat:1.6.1'
+    api 'com.google.android.material:material:1.11.0'
+    api 'androidx.constraintlayout:constraintlayout:2.1.4'
+    api 'androidx.cardview:cardview:1.0.0'
+    
+    // 网络请求
+    api 'com.squareup.retrofit2:retrofit:2.9.0'
+    api 'com.squareup.retrofit2:converter-gson:2.9.0'
+    api 'com.squareup.okhttp3:logging-interceptor:4.12.0'
+    api 'com.google.code.gson:gson:2.10.1'
+    
+    // 图片加载
+    api 'com.github.bumptech.glide:glide:4.16.0'
+    
+    // 视频播放
+    api 'com.google.android.exoplayer:exoplayer:2.19.1'
+    
+    // 协程
+    api 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+    
+    // 测试依赖
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+}
+
+// 发布配置
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.release
+                
+                groupId = 'com.maxrtb'
+                artifactId = 'maxrtb-ad-sdk'
+                version = android.defaultConfig.versionName
+                
+                // 添加源码JAR（可选）
+                artifact androidSourcesJar
+                
+                pom {
+                    name = 'MaxRTB Ad SDK'
+                    description = 'Android advertising SDK for MaxRTB'
+                    url = 'https://github.com/maxrtb/android-sdk'
+                    
+                    licenses {
+                        license {
+                            name = 'The Apache License, Version 2.0'
+                            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        }
+                    }
+                    
+                    developers {
+                        developer {
+                            id = 'maxrtb'
+                            name = 'MaxRTB Team'
+                            email = 'sdk@maxrtb.com'
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+### 1.2 添加混淆配置
+
+**创建 `maxrtbadsdk/consumer-rules.pro`：**
+```proguard
+# MaxRTB SDK混淆规则
+
+# 保留SDK公开API
+-keep public class com.maxrtb.maxrtbadsdk.** {
+    public *;
+}
+
+# 保留回调接口
+-keep interface com.maxrtb.maxrtbadsdk.callback.** { *; }
+
+# 保留数据模型
+-keep class com.maxrtb.maxrtbadsdk.model.** { *; }
+
+# 保留枚举
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}
+
+# Gson相关
+-keepattributes Signature
+-keepattributes *Annotation*
+-keep class sun.misc.Unsafe { *; }
+-keep class com.google.gson.** { *; }
+
+# Retrofit相关
+-keepattributes RuntimeVisibleAnnotations
+-keepattributes RuntimeVisibleParameterAnnotations
+-keepattributes AnnotationDefault
+-keepclassmembers,allowshrinking,allowobfuscation interface * {
+    @retrofit2.http.* <methods>;
+}
+
+# ExoPlayer相关
+-keep class com.google.android.exoplayer2.** { *; }
+-dontwarn com.google.android.exoplayer2.**
+
+# Glide相关
+-keep public class * implements com.bumptech.glide.module.GlideModule
+-keep class * extends com.bumptech.glide.module.AppGlideModule {
+ <init>(...);
+}
+-keep public enum com.bumptech.glide.load.ImageHeaderParser$** {
+  **[] $VALUES;
+  public *;
+}
+```
+
+### 1.3 构建AAR文件
+
+在Terminal中执行：
+```bash
+# 构建Release版本AAR
+./gradlew :maxrtbadsdk:assembleRelease
+
+# AAR文件位置：
+# maxrtbadsdk/build/outputs/aar/maxrtbadsdk-release.aar
+```
+
+## 2. 版本管理
+
+### 2.1 语义化版本控制
+
+```gradle
+// 使用语义化版本号
+def versionMajor = 1      // 重大更新
+def versionMinor = 0      // 功能更新  
+def versionPatch = 0      // 修复更新
+def versionBuild = 1      // 构建号
+
+android {
+    defaultConfig {
+        versionCode versionMajor * 1000000 + versionMinor * 10000 + versionPatch * 100 + versionBuild
+        versionName "${versionMajor}.${versionMinor}.${versionPatch}"
+    }
+}
+```
+
+### 2.2 Git标签管理
+
+```bash
+# 创建版本标签
+git tag -a v1.0.0 -m "Release version 1.0.0"
+git push origin v1.0.0
+
+# 查看所有标签
+git tag -l
+```
+
+## 3. 发布到Maven仓库
+
+### 3.1 发布到本地Maven仓库（测试用）
+
+```bash
+# 发布到本地仓库
+./gradlew :zxadsdk:publishToMavenLocal
+
+# 发布位置：~/.m2/repository/com/maxrtb/zx-ad-sdk/
+```
+
+### 3.2 发布到私有Maven仓库
+
+**在项目根目录的build.gradle中添加：**
+```gradle
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/maxrtb/android-sdk")
+            credentials {
+                username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
+                password = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
+            }
+        }
+    }
+}
+```
+
+**发布到GitHub Packages：**
+```gradle
+// 在SDK模块的build.gradle中
+publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/maxrtb/android-sdk")
+            credentials {
+                username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
+                password = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
+            }
+        }
+    }
+}
+```
+
+### 3.3 发布到JitPack（推荐）
+
+**步骤1：确保项目在GitHub上**
+
+**步骤2：在SDK模块添加JitPack配置：**
+```gradle
+// build.gradle (项目级别)
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+    }
+}
+```
+
+**步骤3：创建GitHub Release**
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+**步骤4：在JitPack.io上构建**
+访问 https://jitpack.io/#yourusername/yourrepo
+
+## 4. 创建集成文档
+
+### 4.1 README.md示例
+
+```markdown
+# MaxRTB Android SDK
+
+## 集成指南
+
+### 1. 添加依赖
+
+在项目根目录的 `build.gradle` 中添加：
+```gradle
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+    }
+}
+```
+
+在应用模块的 `build.gradle` 中添加：
+```gradle
+dependencies {
+    implementation 'com.github.maxrtb:android-sdk:1.0.0'
+}
+```
+
+### 2. 权限配置
+
+在 `AndroidManifest.xml` 中添加：
+```xml
+<uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+<uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+```
+
+### 3. 初始化SDK
+
+```kotlin
+class MyApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        
+        // 初始化SDK
+        MaxRTBAdSDK.init(this, "your_app_id")
+    }
+}
+```
+
+### 4. 加载广告
+
+```kotlin
+// 加载Banner广告
+adSDK.loadAndShowAd(
+    adSlotId = "your_slot_id",
+    adType = AdType.BANNER,
+    container = bannerContainer,
+    callback = object : AdCallback {
+        override fun onAdShow() {
+            // 广告显示
+        }
+        
+        override fun onAdClick() {
+            // 广告点击
+        }
+        
+        override fun onAdClose() {
+            // 广告关闭
+        }
+        
+        override fun onAdError(error: String) {
+            // 广告错误
+        }
+    }
+)
+```
+
+### 5. 混淆配置
+
+如果使用了代码混淆，请在 `proguard-rules.pro` 中添加：
+```proguard
+-keep class com.maxrtb.maxrtbadsdk.** { *; }
+```
+
+## API文档
+
+### MaxRTBAdSDK
+
+主要SDK类，提供广告加载和显示功能。
+
+#### 方法
+
+- `init(context: Context, appId: String): MaxRTBAdSDK` - 初始化SDK
+- `loadAd(adSlotId: String, adType: AdType, callback: AdLoadCallback)` - 加载广告
+- `loadAndShowAd(adSlotId: String, adType: AdType, container: ViewGroup?, callback: AdCallback)` - 加载并显示广告
+- `release()` - 释放资源
+
+### AdType
+
+广告类型枚举：
+
+- `BANNER` - 横幅广告
+- `INTERSTITIAL` - 插屏广告
+- `NATIVE` - 原生广告
+- `SPLASH` - 开屏广告
+- `REWARDED_VIDEO` - 激励视频广告
+- `FEED` - 信息流广告
+
+### 回调接口
+
+#### AdCallback
+- `onAdShow()` - 广告显示回调
+- `onAdClick()` - 广告点击回调
+- `onAdClose()` - 广告关闭回调
+- `onAdError(error: String)` - 广告错误回调
+- `onRewardEarned()` - 奖励获得回调（仅激励视频）
+
+#### AdLoadCallback
+- `onAdLoaded(adData: AdData)` - 广告加载成功回调
+- `onAdLoadFailed(error: String)` - 广告加载失败回调
+
+## 更新日志
+
+### v1.0.0 (2024-01-01)
+- 初始版本发布
+- 支持多种广告类型
+- 完整的错误处理机制
+
+## 技术支持
+
+如有问题请联系：sdk@maxrtb.com
+```
+
+## 5. 发布流程自动化
+
+### 5.1 GitHub Actions自动发布
+
+**创建 `.github/workflows/release.yml`：**
+```yaml
+name: Release SDK
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up JDK 11
+      uses: actions/setup-java@v3
+      with:
+        java-version: '11'
+        distribution: 'adopt'
+    
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+    
+    - name: Build AAR
+      run: ./gradlew :maxrtbadsdk:assembleRelease
+    
+    - name: Upload AAR to Release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./maxrtbadsdk/build/outputs/aar/maxrtbadsdk-release.aar
+        asset_name: maxrtb-ad-sdk-${{ github.event.release.tag_name }}.aar
+        asset_content_type: application/java-archive
+    
+    - name: Publish to Maven
+      run: ./gradlew :maxrtbadsdk:publish
+      env:
+        USERNAME: ${{ github.actor }}
+        TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+## 6. 质量检查清单
+
+### 发布前检查
+
+- [ ] 所有功能测试通过
+- [ ] API文档完整
+- [ ] 混淆配置正确
+- [ ] 版本号更新
+- [ ] 更新日志撰写
+- [ ] 示例代码验证
+- [ ] 权限声明完整
+- [ ] 依赖版本检查
+- [ ] 性能测试通过
+- [ ] 内存泄漏检查
+
+### 发布后验证
+
+- [ ] AAR文件可正常下载
+- [ ] 集成文档准确
+- [ ] 示例项目运行正常
+- [ ] 反馈渠道畅通
+
+## 7. 分发方式总结
+
+### 7.1 直接分发AAR文件
+- 优点：简单直接
+- 缺点：版本管理困难，依赖处理复杂
+
+### 7.2 Maven仓库分发（推荐）
+- 优点：版本管理完善，依赖自动处理
+- 分类：
+   - JitPack（免费，推荐）
+   - GitHub Packages
+   - 私有Maven仓库
+   - Maven Central（需要审核）
+
+### 7.3 最佳实践
+1. 使用JitPack进行公开发布
+2. 提供完整的集成文档
+3. 维护更新日志
+4. 建立反馈机制
+5. 定期版本更新
+
+通过以上流程，你可以将调试好的SDK专业地打包发布，供其他开发者便捷集成使用。
+
+// 1. zxadsdk/build.gradle.kts 配置文件
+plugins {
+id("com.android.library")
+alias(libs.plugins.kotlin.android)
+id("maven-publish")
+}
+
+android {
+namespace = "com.maxrtb.zxadsdk"
+compileSdk = 36
+
+    defaultConfig {
+        minSdk = 21
+        targetSdk = 36
+        versionCode = 1
+        versionName = "1.0.0"
+        
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles("consumer-rules.pro")
+        
+        // 添加构建信息
+        buildConfigField("String", "VERSION_NAME", "\"${versionName}\"")
+        buildConfigField("long", "BUILD_TIME", "${System.currentTimeMillis()}L")
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            consumerProguardFiles("consumer-rules.pro")
+        }
+        debug {
+            isMinifyEnabled = false
+            isDebuggable = true
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+    
+    buildToolsVersion = "36.0.0"
+    
+    // 生成源码JAR
+    tasks.register<Jar>("androidSourcesJar") {
+        archiveClassifier.set("sources")
+        from(android.sourceSets.getByName("main").java.srcDirs)
+    }
+}
+
+dependencies {
+// Android基础库
+implementation(libs.androidx.core.ktx.v1120)
+implementation(libs.androidx.appcompat)
+implementation(libs.material)
+implementation(libs.androidx.constraintlayout)
+implementation(libs.androidx.cardview)
+
+    // 网络请求
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
+    implementation(libs.logging.interceptor)
+    implementation(libs.gson)
+
+    // 图片加载
+    implementation(libs.glide)
+
+    // 视频播放
+    implementation(libs.exoplayer)
+
+    // 协程
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.runtime)
+    implementation(libs.ui)
+
+    // 测试依赖
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.junit.v130)
+    androidTestImplementation(libs.androidx.espresso.core.v370)
+
+    implementation(libs.androidx.cardview)
+    implementation(libs.exoplayer)
+    implementation(libs.glide.v4160)
+}
+
+// 发布配置
+afterEvaluate {
+publishing {
+publications {
+create<MavenPublication>("release") {
+from(components["release"])
+
+                groupId = "com.maxrtb"
+                artifactId = "zx-ad-sdk"
+                version = android.defaultConfig.versionName
+                
+                // 添加源码JAR
+                artifact(tasks.getByName("androidSourcesJar"))
+                
+                pom {
+                    name.set("ZxAd SDK")
+                    description.set("Android advertising SDK for ZxAd platform")
+                    url.set("https://github.com/maxrtb/zx-ad-sdk")
+                    
+                    licenses {
+                        license {
+                            name.set("The Apache License, Version 2.0")
+                            url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                        }
+                    }
+                    
+                    developers {
+                        developer {
+                            id.set("maxrtb")
+                            name.set("MaxRTB Team")
+                            email.set("sdk@maxrtb.com")
+                        }
+                    }
+                }
+            }
+        }
+        
+        repositories {
+            maven {
+                name = "GitHubPackages"
+                url = uri("https://maven.pkg.github.com/maxrtb/zx-ad-sdk")
+                credentials {
+                    username = project.findProperty("gpr.user") as String? ?: System.getenv("USERNAME")
+                    password = project.findProperty("gpr.key") as String? ?: System.getenv("TOKEN")
+                }
+            }
+        }
+    }
+}
+
+// 2. zxadsdk/consumer-rules.pro 混淆配置
+/*
+# ZxAd SDK 混淆规则
+
+# 保留SDK公开API
+-keep public class com.maxrtb.zxadsdk.** {
+public *;
+}
+
+# 保留回调接口
+-keep interface com.maxrtb.zxadsdk.callback.** { *; }
+
+# 保留数据模型
+-keep class com.maxrtb.zxadsdk.model.** { *; }
+
+# 保留枚举
+-keepclassmembers enum * {
+public static **[] values();
+public static ** valueOf(java.lang.String);
+}
+
+# Gson相关
+-keepattributes Signature
+-keepattributes *Annotation*
+-keep class sun.misc.Unsafe { *; }
+-keep class com.google.gson.** { *; }
+
+# Retrofit相关
+-keepattributes RuntimeVisibleAnnotations
+-keepattributes RuntimeVisibleParameterAnnotations
+-keepattributes AnnotationDefault
+-keepclassmembers,allowshrinking,allowobfuscation interface * {
+@retrofit2.http.* <methods>;
+}
+
+# ExoPlayer相关
+-keep class com.google.android.exoplayer2.** { *; }
+-dontwarn com.google.android.exoplayer2.**
+
+# Glide相关
+-keep public class * implements com.bumptech.glide.module.GlideModule
+-keep class * extends com.bumptech.glide.module.AppGlideModule {
+<init>(...);
+}
+-keep public enum com.bumptech.glide.load.ImageHeaderParser$** {
+**[] $VALUES;
+public *;
+}
+
+# 防止SDK内部类被混淆
+-keep class com.maxrtb.zxadsdk.renderer.** { *; }
+-keep class com.maxrtb.zxadsdk.network.** { *; }
+-keep class com.maxrtb.zxadsdk.utils.** { *; }
+*/
+
+// 3. 项目根目录 settings.gradle.kts
+pluginManagement {
+repositories {
+google()
+mavenCentral()
+gradlePluginPortal()
+}
+}
+
+dependencyResolutionManagement {
+repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+repositories {
+google()
+mavenCentral()
+maven { url = uri("https://jitpack.io") }
+}
+}
+
+rootProject.name = "ZxAdSDK"
+include(":app")        // Demo应用
+include(":zxadsdk")    // SDK库
+
+// 4. 构建和发布命令
+/*
+# 构建AAR文件
+./gradlew :zxadsdk:assembleRelease
+
+# 发布到本地Maven仓库（测试用）
+./gradlew :zxadsdk:publishToMavenLocal
+
+# 发布到远程仓库
+./gradlew :zxadsdk:publish
+
+# 清理构建
+./gradlew clean
+
+# 完整构建流程
+./gradlew clean :zxadsdk:assembleRelease :zxadsdk:publishToMavenLocal
+
+# 生成的AAR文件位置：
+# zxadsdk/build/outputs/aar/zxadsdk-release.aar
+*/
+
+// 5. 集成文档示例 - README.md
+/*
+# ZxAd Android SDK
+
+## 快速集成
+
+### 1. 添加依赖
+
+在项目根目录的 `build.gradle` 中添加：
+```gradle
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+    }
+}
+```
+
+在应用模块的 `build.gradle` 中添加：
+```gradle
+dependencies {
+    implementation 'com.github.maxrtb:zx-ad-sdk:1.0.0'
+}
+```
+
+### 2. 权限配置
+
+在 `AndroidManifest.xml` 中添加：
+```xml
+<uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+<uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+```
+
+### 3. 初始化SDK
+
+```kotlin
+class MyApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        
+        // 初始化SDK
+        ZxAdSDK.init(this, "your_app_id")
+    }
+}
+```
+
+### 4. 加载广告示例
+
+#### Banner广告
+```kotlin
+class MainActivity : AppCompatActivity() {
+    private lateinit var adSDK: ZxAdSDK
+    
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        // 初始化SDK
+        adSDK = ZxAdSDK.init(this, "your_app_id")
+        
+        // 加载Banner广告
+        adSDK.loadAndShowAd(
+            adSlotId = "banner_slot_001",
+            adType = AdType.BANNER,
+            container = findViewById(R.id.banner_container),
+            callback = object : AdCallback {
+                override fun onAdShow() {
+                    Log.d("Ad", "Banner ad shown")
+                }
+                
+                override fun onAdClick() {
+                    Log.d("Ad", "Banner ad clicked")
+                }
+                
+                override fun onAdClose() {
+                    Log.d("Ad", "Banner ad closed")
+                }
+                
+                override fun onAdError(error: String) {
+                    Log.e("Ad", "Banner ad error: $error")
+                }
+            }
+        )
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        adSDK.release()
+    }
+}
+```
+
+#### 插屏广告
+```kotlin
+// 加载插屏广告
+adSDK.loadAndShowAd(
+    adSlotId = "interstitial_slot_001",
+    adType = AdType.INTERSTITIAL,
+    callback = object : AdCallback {
+        override fun onAdShow() {
+            // 广告显示
+        }
+        
+        override fun onAdClick() {
+            // 广告点击
+        }
+        
+        override fun onAdClose() {
+            // 广告关闭
+        }
+        
+        override fun onAdError(error: String) {
+            // 广告错误
+        }
+    }
+)
+```
+
+#### 激励视频广告
+```kotlin
+// 加载激励视频广告
+adSDK.loadAndShowAd(
+    adSlotId = "rewarded_slot_001",
+    adType = AdType.REWARDED_VIDEO,
+    callback = object : AdCallback {
+        override fun onAdShow() {
+            // 广告显示
+        }
+        
+        override fun onAdClick() {
+            // 广告点击
+        }
+        
+        override fun onAdClose() {
+            // 广告关闭
+        }
+        
+        override fun onAdError(error: String) {
+            // 广告错误
+        }
+        
+        override fun onRewardEarned() {
+            // 奖励获得
+            Log.d("Ad", "用户获得奖励!")
+        }
+    }
+)
+```
+
+### 5. 支持的广告类型
+
+- `AdType.BANNER` - 横幅广告
+- `AdType.INTERSTITIAL` - 插屏广告
+- `AdType.NATIVE` - 原生广告
+- `AdType.SPLASH` - 开屏广告
+- `AdType.REWARDED_VIDEO` - 激励视频广告
+- `AdType.FEED` - 信息流广告
+- `AdType.FLOAT` - 浮窗广告
+
+### 6. 混淆配置
+
+如果使用了代码混淆，请在 `proguard-rules.pro` 中添加：
+```proguard
+-keep class com.maxrtb.zxadsdk.** { *; }
+```
+
+### 7. 技术支持
+
+如有问题请联系：sdk@maxrtb.com
+
+## 更新日志
+
+### v1.0.0 (2024-01-01)
+- 初始版本发布
+- 支持多种广告类型
+- 完整的错误处理机制
+  */
+
+// 6. 发布脚本 publish.sh
+/*
+#!/bin/bash
+
+echo "Building ZxAd SDK..."
+
+# 清理构建
+./gradlew clean
+
+# 构建Release版本
+./gradlew :zxadsdk:assembleRelease
+
+if [ $? -eq 0 ]; then
+echo "✅ Build successful!"
+echo "📦 AAR file: zxadsdk/build/outputs/aar/zxadsdk-release.aar"
+
+    # 发布到本地仓库
+    echo "Publishing to local repository..."
+    ./gradlew :zxadsdk:publishToMavenLocal
+    
+    if [ $? -eq 0 ]; then
+        echo "✅ Published to local repository!"
+        echo "📍 Location: ~/.m2/repository/com/maxrtb/zx-ad-sdk/"
+    else
+        echo "❌ Failed to publish to local repository"
+    fi
+else
+echo "❌ Build failed!"
+exit 1
+fi
+*/

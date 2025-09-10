@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "MaxRTBAdSDK"
+rootProject.name = "MaxRTB-SDK"
 include(":app")
- 
+include(":zxadsdk")
