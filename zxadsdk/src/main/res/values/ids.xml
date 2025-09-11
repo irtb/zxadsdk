@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <item name="banner_container" type="id">banner_container</item>
-    <item name="interstitial_content" type="id">interstitial_content</item>
-    <item name="interstitial_close" type="id">interstitial_close</item>
-    <item name="countdown_text" type="id">countdown_text</item>
+    <item name="banner_container" type="id"/>
+    <item name="interstitial_content" type="id"/>
+    <item name="interstitial_close" type="id"/>
+    <item name="countdown_text" type="id"/>
 </resources>
